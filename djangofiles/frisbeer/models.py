@@ -195,6 +195,7 @@ class Game(models.Model):
 
     team1_score = models.IntegerField(default=0, choices=((0, 0), (1, 1), (2, 2)))
     team2_score = models.IntegerField(default=0, choices=((0, 0), (1, 1), (2, 2)))
+    elo_change = models.IntegerField(default=0)
     state = models.IntegerField(choices=game_state_choices, default=PENDING,
                                 help_text="0: pending - the game has been proposed but is still missing players. "
                                           "1: ready - the game can be played now. Setting this state creates teams. "
@@ -230,6 +231,11 @@ class Game(models.Model):
     def save(self, *args, **kwargs):
         if not self.season:
             self.season = Season.current()
+        # Auto approve games
+        # if self.id:        
+        #     old_game = Game.objects.get(pk=self.id)        
+        #     if old_game.state == Game.READY and self.state == Game.PLAYED:
+        #         self.state = Game.APPROVED
         super().save(*args, **kwargs)
 
     def __str__(self):

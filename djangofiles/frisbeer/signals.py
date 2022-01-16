@@ -20,17 +20,18 @@ def update_statistics(sender, instance, **kwargs):
         logging.debug("Game was saved, but hasn't been played yet. Sender %s, instance %s", sender, instance)
         return
 
-    update_elo()
-    update_score()
-    calculate_ranks()
-    update_team_score()
+    update_elo(instance) # 18 seconds
+    update_score() # 2 seconds
+    calculate_ranks() # 1 second
+    update_team_score(instance) # 9 seconds
 
 
-def update_elo():
+def update_elo(initialiser=None):
     """
     Calculate new elos for all players.
 
-    Update is done for all players because matches are possibly added in non-chronological order
+    Update is done for all players if game that initialized update is from past season.
+    For current season games, player elos are reverted to the state of the initializer game and recalculated from there
     """
 
     logging.info("Updating elos (mabby)")
@@ -39,9 +40,7 @@ def update_elo():
         # Halves the distance from median elo for all players
         Player.objects.all().update(elo=(F('elo') - 1500) / 2 + 1500, season_best=0)
 
-    games = Game.objects.filter(state=Game.APPROVED).order_by("date")
-
-    Player.objects.all().update(elo=1500, season_best=0)
+    games = rollback_player_elo(initialiser)
 
     season = None
 
@@ -63,9 +62,10 @@ def update_elo():
 
         # We only need to calculate elo change for one team, since elo change is the same for all players
         # and symmetrical between losing and winning sides
-        team1_elo_change = (game.team1_score * calculate_elo_change(team1_pregame_elo, team2_pregame_elo, True)
-                            + game.team2_score * calculate_elo_change(team1_pregame_elo, team2_pregame_elo, False))
+        team1_elo_change = round((game.team1_score * calculate_elo_change(team1_pregame_elo, team2_pregame_elo, True)
+                            + game.team2_score * calculate_elo_change(team1_pregame_elo, team2_pregame_elo, False)))
 
+        game.elo_change = team1_elo_change
         for player in team1:
             player.elo += team1_elo_change
             # logging.debug("{0} elo changed {1:0.2f}".format(player.name, team1_elo_change))
@@ -78,10 +78,63 @@ def update_elo():
             if player.elo > player.season_best:
                 player.season_best = player.elo
             player.save()
-
+    Game.objects.bulk_update(games, ["elo_change"])
     # New season has begun, but no games yet played -> decay
     if season != Season.current():
         _elo_decay()
+
+def rollback_player_elo(game):
+    """
+    Runs games back in time and reverts elo changes caused by them to players
+    """
+    if game != None and game.season == Season.current():
+        games = Game.objects.filter(state=Game.APPROVED).filter(date__gte=game.date).order_by("date")
+        if len(games) > 1:
+            games = Game.objects.filter(season_id=Season.current().id, state=Game.APPROVED).order_by("date")
+            Player.objects.all().update(season_best=0)
+        for game in reversed(games):
+            if not game.can_score():
+                continue
+            team1 = [r.player for r in list(game.gameplayerrelation_set.filter(team=1))]
+            team2 = [r.player for r in list(game.gameplayerrelation_set.filter(team=2))]
+
+            team1_elo_change = game.elo_change * -1
+            for player in team1:
+                old_elo = player.elo
+                player.elo += team1_elo_change
+                # logging.debug("{0} elo rollback {1:0.2f}. New: {2}".format(player.name, team1_elo_change, player.elo))
+                if old_elo == player.season_best and player.elo < old_elo:
+                    # Only really applicable if only one game is being reversed. Would need individual player history to do proberly
+                    player.season_best = player.elo
+                player.save()
+            for player in team2:
+                player.elo -= team1_elo_change
+                if old_elo == player.season_best and player.elo < old_elo:
+                    player.season_best = player.elo
+                # logging.debug("{0} elo rollback {1:0.2f}. New: {2}".format(player.name, -team1_elo_change, player.elo))
+                player.save()
+        return games
+    else:
+        Player.objects.all().update(elo=1500, season_best=0)
+        return Game.objects.filter(state=Game.APPROVED).order_by("date")
+
+def get_team_games(game):
+    """
+    Gets games for team elo update
+    If game in question is the newest, just use that, otherwise count whole season elos
+    """
+    season = Season.current()
+    if game != None:
+        games = Game.objects.filter(season=season, state=Game.APPROVED).filter(date__gte=game.date).order_by("date")
+        if len(games) == 1:
+            teams = GameTeamRelation.objects.filter(game_id=games[0].id)
+            if len(teams) == 0:
+                # new game, just do that
+                return games
+    games = Game.objects.filter(season=season, state=Game.APPROVED).order_by("date")
+    Team.objects.filter(virtual=True).delete()
+    Team.objects.all().update(elo=1500, season_best=0)
+    return games
 
 
 def update_score():
@@ -119,11 +172,10 @@ def update_score():
 BACKUP_PENALTY_PERCENT = 22.45
 
 
-def update_team_score():
-    Team.objects.filter(virtual=True).delete()
-    Team.objects.all().update(elo=1500, season_best=0)
+def update_team_score(initialiser=None):
     season = Season.current()
-    games = Game.objects.filter(season=season, state=Game.APPROVED).order_by("date")
+
+    games = get_team_games(initialiser)
 
     for game in games:
         if not game.can_score():
@@ -134,8 +186,7 @@ def update_team_score():
         GameTeamRelation.objects.update_or_create(side=1, game=game, defaults={'team': team1})
         GameTeamRelation.objects.update_or_create(side=2, game=game, defaults={'team': team2})
 
-        team1_elo_change = (game.team1_score * calculate_elo_change(team1.elo, team2.elo, True) +
-                            game.team2_score * calculate_elo_change(team1.elo, team2.elo, False))
+        team1_elo_change = game.elo_change
 
         team2_elo_change = -team1_elo_change
 

@@ -8,6 +8,7 @@ class PlayerInGameInline(admin.TabularInline):
 
 class GameAdmin(admin.ModelAdmin):
     inlines = [PlayerInGameInline, ]
+    exclude = ('elo_change', '_rules')
 
     def get_changeform_initial_data(self, request):
         return {'season': Season.current().id }

@@ -22,14 +22,13 @@ for name in (
     player = Player(name=name)
     player.save()
     players.add(player)
-
 Game.objects.all().delete()
-
+playerList = list(players)
 for i in range(10):
     g = Game(name="Testipeli {}".format(i), season=Season.current())
     g.save()
-    t1 = set(random.sample(players, 3))
-    t2 = random.sample(players - t1, 3)
+    t1 = set(random.sample(playerList, 3))
+    t2 = random.sample(list(players - t1), 3)
     for player in t1:
         GamePlayerRelation(player=player, game=g, team=1).save()
     for player in t2:
