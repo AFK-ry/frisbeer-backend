@@ -12,14 +12,20 @@ services:
       - "8000:8000"
     volumes:
       - static-content:/var/www/frisbeer/static:rw
+    restart: unless-stopped
 
   db:
     container_name: frisbeer-db
     image: postgres:11
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: <password>
     volumes:
       - pg-data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
+    restart: unless-stopped
 
   frisbeer-nginx:
     container_name: frisbeer-nginx
@@ -32,6 +38,7 @@ services:
       - static-content:/var/www/frisbeer/static:ro
     ports:
       - "8080:8080"
+    restart: unless-stopped
 
 volumes:
   pg-data:

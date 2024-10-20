@@ -28,7 +28,7 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'ujgykn5$#+#8ye4g9tn!j*&*-+$b)m7-dyi@9
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DEBUG', False)
 
-ALLOWED_HOSTS = ["localhost", "127.0.0.1", "api.frisbeer.win"]
+ALLOWED_HOSTS = ["localhost", "127.0.0.1", "afkry.fi", "api.afkry.fi"]
 
 USE_X_FORWARDED_HOST = True
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
@@ -48,6 +48,17 @@ INSTALLED_APPS = [
     'frisbeer',
     'rest_framework',
     'rest_framework.authtoken',
+]
+
+MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
+    'django.middleware.security.SecurityMiddleware',
+    'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.middleware.common.CommonMiddleware',
+    'django.middleware.csrf.CsrfViewMiddleware',
+    'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'django.contrib.messages.middleware.MessageMiddleware',
+    'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
 MIDDLEWARE_CLASSES = [
@@ -90,6 +101,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.postgresql_psycopg2',
         'NAME': 'postgres',
         'USER': 'postgres',
+        'PASSWORD': '<password>',
         'HOST': 'db',
         'PORT': '5432',
     }
@@ -150,10 +162,10 @@ REST_FRAMEWORK = {
 }
 
 CORS_ORIGIN_WHITELIST = [
-    'localhost:8000',
-    '127.0.0.1:8000',
-    'frisbeer.win',
-    'null'
+    'http://localhost:8050',
+    'http://127.0.0.1:8050',
+    'http://afkry.fi',
+    'https://afkry.fi',
 ]
 
 ELO_K = 32
