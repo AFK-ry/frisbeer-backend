@@ -45,14 +45,13 @@ INSTALLED_APPS = [
     'rest_framework.authtoken',
 ]
 
-MIDDLEWARE_CLASSES = [
+MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django.contrib.auth.middleware.SessionAuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
@@ -82,8 +81,11 @@ WSGI_APPLICATION = 'server.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+        'ENGINE': 'django.db.backends.postgresql_psycopg2',
+        'NAME': 'postgres',
+        'USER': 'postgres',
+        'HOST': 'localhost',
+        'PORT': '5432',
     }
 }
 
@@ -140,8 +142,10 @@ REST_FRAMEWORK = {
 }
 
 CORS_ORIGIN_WHITELIST = [
-    'localhost:8000',
-    '127.0.0.1:8000',
+    'http://localhost:8000',
+    'http://127.0.0.1:8000',
+    'https://afkry.fi',
+    'http://104.248.205.42:8080',
     'null'
 ]
 

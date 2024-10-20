@@ -4,3 +4,5 @@ __pycache__
 db.sqlite3
 *.pyc
 log.txt
+venv/
+.env

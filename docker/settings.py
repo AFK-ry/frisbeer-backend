@@ -23,12 +23,12 @@ logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s
 # See https://docs.djangoproject.com/en/1.9/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'ujgykn5$#+#8ye4g9tn!j*&*-+$b)m7-dyi@9qejumj8g2xtuu'
+SECRET_KEY = os.environ.get('SECRET_KEY', 'ujgykn5$#+#8ye4g9tn!j*&*-+$b)m7-dyi@9qejumj8g2xtuu')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get('DEBUG', False)
 
-ALLOWED_HOSTS = ["localhost"]
+ALLOWED_HOSTS = ["localhost", "127.0.0.1", "afkry.fi", "api.afkry.fi"]
 
 USE_X_FORWARDED_HOST = True
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
@@ -48,6 +48,17 @@ INSTALLED_APPS = [
     'frisbeer',
     'rest_framework',
     'rest_framework.authtoken',
+]
+
+MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
+    'django.middleware.security.SecurityMiddleware',
+    'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.middleware.common.CommonMiddleware',
+    'django.middleware.csrf.CsrfViewMiddleware',
+    'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'django.contrib.messages.middleware.MessageMiddleware',
+    'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
 MIDDLEWARE_CLASSES = [
@@ -87,11 +98,12 @@ WSGI_APPLICATION = 'server.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'frisbeer',
-        'USER': 'frisbeer',
-        'PASSWORD': 'supasecret',
-        'HOST': 'mariadb',
+        'ENGINE': 'django.db.backends.postgresql_psycopg2',
+        'NAME': 'postgres',
+        'USER': 'postgres',
+        'PASSWORD': '<password>',
+        'HOST': 'db',
+        'PORT': '5432',
     }
 }
 
@@ -135,7 +147,7 @@ STATICFILES_DIRS = [
     #os.path.join(BASE_DIR, "static"),
 ]
 
-STATIC_ROOT = "/var/static"
+STATIC_ROOT = "/var/www/frisbeer/static"
 
 REST_FRAMEWORK = {
     # Use Django's standard `django.contrib.auth` permissions,
@@ -150,9 +162,10 @@ REST_FRAMEWORK = {
 }
 
 CORS_ORIGIN_WHITELIST = [
-    'localhost:8000',
-    '127.0.0.1:8000',
-    'null'
+    'http://localhost:8050',
+    'http://127.0.0.1:8050',
+    'http://afkry.fi',
+    'https://afkry.fi',
 ]
 
 ELO_K = 32
