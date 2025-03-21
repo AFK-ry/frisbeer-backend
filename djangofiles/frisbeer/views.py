@@ -46,8 +46,18 @@ class GameViewSet(viewsets.ModelViewSet):
     create:
     Start a new pending game. Continue updating game with PATCH
     """
-    queryset = Game.objects.all()
     serializer_class = GameSerializer
+
+    def get_queryset(self):
+        queryset = Game.objects
+        state = self.request.query_params.get('state')
+        if state is not None:
+            try:
+                state = int(state)
+                queryset = queryset.filter(state__lte=state)
+            except ValueError:
+                pass
+        return queryset.all() 
 
     @action(detail=True, methods=['post'])
     def add_player(self, request, pk=None):
