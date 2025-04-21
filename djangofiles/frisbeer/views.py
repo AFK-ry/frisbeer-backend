@@ -53,6 +53,11 @@ class GameViewSet(viewsets.ModelViewSet):
             'gameplayerrelation_set__player',  # Fetches players for each game
             'gameplayerrelation_set__player__rank',  # Fetches ranks for each player
             'gameteamrelation_set__team'  # Fetches teams for each game
+        ).select_related(
+            'location',
+            '_rules',
+            'season',
+            'season__game_rules'
         )
         state = self.request.query_params.get('state')
         if state is not None:
