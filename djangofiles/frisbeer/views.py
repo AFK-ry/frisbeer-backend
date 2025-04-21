@@ -49,7 +49,11 @@ class GameViewSet(viewsets.ModelViewSet):
     serializer_class = GameSerializer
 
     def get_queryset(self):
-        queryset = Game.objects
+        queryset = Game.objects.prefetch_related(
+            'gameplayerrelation_set__player',  # Fetches players for each game
+            'gameplayerrelation_set__player__rank',  # Fetches ranks for each player
+            'gameteamrelation_set__team'  # Fetches teams for each game
+        )
         state = self.request.query_params.get('state')
         if state is not None:
             try:
