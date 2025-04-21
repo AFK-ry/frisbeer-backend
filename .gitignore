@@ -6,3 +6,4 @@ db.sqlite3
 log.txt
 venv/
 .env
+pg_dump.sql

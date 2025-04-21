@@ -41,7 +41,7 @@ def update_elo():
 
     games = Game.objects.filter(state=Game.APPROVED).order_by("date")
 
-    Player.objects.all().update(elo=1500, season_best=0)
+    Player.objects.exclude(elo=1400).update(elo=1500, season_best=0)
 
     season = None
 

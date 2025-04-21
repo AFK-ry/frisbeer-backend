@@ -22,7 +22,7 @@ class Rank(models.Model):
 
 
 class Player(models.Model):
-    elo = models.IntegerField(default=1500)
+    elo = models.IntegerField(default=1400)
     score = models.IntegerField(default=0)
     season_best = models.IntegerField(default=0)
     name = models.CharField(max_length=100, unique=True)

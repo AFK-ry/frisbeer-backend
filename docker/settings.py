@@ -16,6 +16,10 @@ import logging
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
+TIMEOUT = 600
+GUNICORN_TIMEOUT = 600
+KEEP_ALIVE = 600
+
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.DEBUG,
                     filename=os.path.join(BASE_DIR, "log.txt"))
 
@@ -166,6 +170,8 @@ CORS_ORIGIN_WHITELIST = [
     'http://127.0.0.1:8050',
     'http://afkry.fi',
     'https://afkry.fi',
+    'http://www.afkry.fi',
+    'https://www.afkry.fi',
 ]
 
 ELO_K = 32
