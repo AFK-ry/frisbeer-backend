@@ -35,12 +35,17 @@ def create_equal_teams(players):
     :return: Tuple containing: Elo difference between the teams; players in team 1; players in team 2
     """
 
+    adjusted_players = []
+    for player in players:
+        if player.rank == None:
+            player.elo -= 100
+        adjusted_players.append(player)
     elo_list = []
-    players_in_team = len(players) // 2
-    possibilities = itertools.combinations(players, players_in_team)
+    players_in_team = len(adjusted_players) // 2
+    possibilities = itertools.combinations(adjusted_players, players_in_team)
 
     for team1 in possibilities:
-        team2 = players - set(team1)
+        team2 = set(adjusted_players) - set(team1)
         elo1 = calculate_team_elo(team1)
         elo2 = calculate_team_elo(team2)
         elo_list.append((abs(elo1 - elo2), team1, team2))
