@@ -2,10 +2,11 @@
 
 ## Table of Contents
 1. [Creating a Backup from Production](#creating-a-backup-from-production)
-2. [Downloading the Backup](#downloading-the-backup)
-3. [Restoring in Linux Bash](#restoring-in-linux-bash)
-4. [Restoring in PowerShell (Windows)](#restoring-in-powershell-windows)
-5. [Troubleshooting](#troubleshooting)
+2. [Automated Backups (Production)](#automated-backups-production)
+3. [Downloading the Backup](#downloading-the-backup)
+4. [Restoring in Linux Bash](#restoring-in-linux-bash)
+5. [Restoring in PowerShell (Windows)](#restoring-in-powershell-windows)
+6. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -38,6 +39,145 @@ ls -lh backup_*.sql
 You should see something like:
 ```
 -rw-r--r-- 1 user user 5.2M Apr 5 12:17 backup_2026-04-05_121706.sql
+```
+
+---
+
+## Automated Backups (Production)
+
+Automated weekly backups with retention of the latest 5 backups.
+
+These have been setup in afkry.fi server as descriped here
+
+### Setup Instructions
+
+#### Step 1: Create the Backup Script
+
+SSH into your production server and create `/usr/local/bin/frisbeer-db-backup.sh`:
+
+```bash
+sudo nano /usr/local/bin/frisbeer-db-backup.sh
+```
+
+Paste the following content:
+
+```bash
+#!/bin/bash
+set -e
+
+BACKUP_DIR="/backups/database"
+RETENTION=5
+TIMESTAMP=$(date +%Y-%m-%d_%H%M%S)
+BACKUP_FILE="$BACKUP_DIR/backup_${TIMESTAMP}.sql"
+
+# Create backup directory if it doesn't exist
+mkdir -p "$BACKUP_DIR"
+
+# Create backup
+docker exec frisbeer-db pg_dump -U postgres postgres > "$BACKUP_FILE"
+
+# Compress it (saves ~70% disk space)
+gzip "$BACKUP_FILE"
+
+# Keep only the 5 latest backups
+cd "$BACKUP_DIR"
+ls -t backup_*.sql.gz 2>/dev/null | tail -n +$((RETENTION + 1)) | xargs -r rm --
+
+echo "Backup completed: $BACKUP_FILE.gz" >> /var/log/backups.log
+```
+
+#### Step 2: Make the Script Executable
+
+```bash
+sudo chmod +x /usr/local/bin/frisbeer-db-backup.sh
+```
+
+#### Step 3: Create Backup Directory
+
+```bash
+sudo mkdir -p /backups/database
+sudo chmod 755 /backups/database
+```
+
+#### Step 4: Set Up Cron Job
+
+Edit the root crontab:
+
+```bash
+sudo crontab -e
+```
+
+Add the following line (runs every Sunday at 2 AM):
+
+```bash
+0 2 * * 0 /usr/local/bin/frisbeer-db-backup.sh
+```
+
+**Cron Timing Reference:**
+- `0` = minute (0)
+- `2` = hour (2 AM)
+- `*` = day of month (any)
+- `*` = month (any)
+- `0` = day of week (0 = Sunday)
+
+#### Step 5: Verify Setup
+
+Check that the cron job is scheduled:
+
+```bash
+sudo crontab -l | grep frisbeer-db-backup
+```
+
+You should see the backup line listed.
+
+### Monitoring
+
+#### View Backup Logs
+
+```bash
+tail -f /var/log/backups.log
+```
+
+#### List All Backups
+
+```bash
+ls -lh /backups/database/
+```
+
+#### Test the Script Manually
+
+```bash
+sudo /usr/local/bin/frisbeer-db-backup.sh
+```
+
+### How It Works
+
+- **Weekly Schedule:** Runs every Sunday at 2 AM (adjust time in crontab as needed)
+- **Compression:** Backups are gzipped (~70% smaller)
+- **Retention Policy:** Only the 5 latest backups are kept; older ones are automatically deleted
+- **Logging:** Each backup is logged to `/var/log/backups.log`
+
+The cleanup logic:
+```bash
+ls -t backup_*.sql.gz           # List files, sorted newest first (-t)
+| tail -n +6                     # Skip first 5 (RETENTION=5), output 6th onward
+| xargs -r rm --                 # Delete those files
+```
+
+### Restoring from Automated Backups
+
+Backups are stored as compressed files in `/backups/database/`:
+
+```bash
+gunzip -c /backups/database/backup_2026-04-05_121706.sql.gz | docker exec -i frisbeer-db psql -U postgres postgres
+```
+
+Or download via SCP:
+
+```bash
+scp user@your-server.com:/backups/database/backup_*.sql.gz ./
+gunzip backup_*.sql.gz
+cat backup_*.sql | docker exec -i frisbeer-db psql -U postgres postgres
 ```
 
 ---
